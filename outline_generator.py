@@ -6,14 +6,25 @@ import google.generativeai as genai
 import streamlit as st
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
+# --- Config Section ---
+MODEL_NAME = "gemini-2.0-flash"
+GENERATION_CONFIG = {
+    "temperature": 0.6,
+    "top_k": 1,
+    "max_output_tokens": 1024
+}
+
 
 def main():
     set_page_config()
     custom_css()
     hide_elements()
     title_and_description()
+    how_to_use_section()
     advanced_settings()
     input_section()
+    help_faq_section()
+    st.markdown('<div class="footer">Made with ❤️ by ALwrity | <a href="https://github.com/AJaySi/AI-Writer" style="color:#1976D2;">Support</a></div>', unsafe_allow_html=True)
 
 
 def set_page_config():
@@ -44,8 +55,8 @@ def custom_css():
             width: 16px;
         }
         div.stButton > button:first-child {
-            background: #1565C0;
-            color: white;
+            background: #1565C0 !important;
+            color: white !important;
             border: none;
             padding: 12px 24px;
             border-radius: 8px;
@@ -59,6 +70,8 @@ def custom_css():
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
             font-weight: bold;
         }
+        .streamlit-expanderHeader {color: #fff !important; background: #111 !important; border-radius: 8px;}
+        .streamlit-expanderContent {background: #111 !important;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -76,6 +89,18 @@ def title_and_description():
     st.markdown("This app helps you create a comprehensive outline for your blog, article, essay, story, or any content type using AI technology. 🧠✨")
 
 
+def how_to_use_section():
+    with st.expander('How to Use', expanded=False):
+        st.markdown('''<div style="background:#111;padding:1rem;border-radius:10px;margin-bottom:1.5rem;">
+        <ol style="color:#fff;margin-left:1.2em;">
+          <li>Enter your topic or main keywords below.<br>(Or click <b>Try Example</b> to see how it works!)</li>
+          <li>Select your content type and number of headings/subheadings.</li>
+          <li>Click <b>Generate Outline</b> to get your result.</li>
+          <li>Copy and use your outline in your blog or article!</li>
+        </ol>
+        </div>''', unsafe_allow_html=True)
+
+
 def advanced_settings():
     # Advanced Settings (API Key)
     with st.expander("Advanced Settings ⚙️", expanded=False):
@@ -88,49 +113,68 @@ def input_section():
     with st.expander("**💡 PRO-TIP** - Better input yield, better results.", expanded=True):
         col1, space, col2 = st.columns([5, 0.1, 5])
         with col1:
-            outline_title = st.text_input(
-                '**Enter Title of your content or main keywords:**',
-                help="🔍 Describe the idea of the whole content in a single sentence. Keep it between 1-3 sentences.",
+            if 'example_clicked' not in st.session_state:
+                st.session_state['example_clicked'] = False
+
+            def fill_example():
+                st.session_state['outline_title'] = "Free AI Writer"
+                st.session_state['example_clicked'] = True
+
+            st.text_input(
+                'Topic or Main Keywords',
+                key='outline_title',
+                help="Describe your content idea in a sentence or a few keywords. E.g., 'Free AI Writer'",
                 placeholder="E.g., How to Boost Your Productivity with Simple Hacks"
             )
-
+            st.button('Try Example', on_click=fill_example, help="Click to auto-fill an example topic.")
             content_type = st.selectbox(
-                "**Select the type of content:**",
+                "Content Type",
                 options=["Blog", "Article", "Essay", "Story", "Other"],
-                help="📝 Choose the type of content you want to create an outline for."
+                help="Choose the type of content you want to outline."
             )
         with col2:
             num_headings = st.slider(
-                "**Number of main headings:**",
+                "Number of Main Headings",
                 min_value=1,
                 max_value=10,
                 value=5,
-                help="📌 Choose the number of main headings for the outline."
+                help="How many main sections should your outline have?"
             )
-
             num_subheadings = st.slider(
-                "**Number of subheadings per heading:**",
+                "Subheadings per Heading",
                 min_value=1,
                 max_value=5,
                 value=3,
-                help="📋 Choose the number of subheadings under each main heading."
+                help="How many subpoints under each main heading?"
             )
-
-        if st.button('**✍️ Get AI Outline**'):
+        if st.button('Generate Outline', help="Click to generate your content outline."):
+            outline_title = st.session_state.get('outline_title', '')
             if outline_title.strip():
-                with st.spinner("⏳ Hang On, Generating Outline..."):
-                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings)
+                with st.spinner("Generating your outline..."):
+                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings, st.session_state.get("user_gemini_api_key"))
                     if content_outline:
-                        st.subheader('**📋 Your Content Outline:**')
+                        st.success('Your outline is ready!')
+                        st.subheader('📋 Your Content Outline:')
                         st.markdown(content_outline)
-                        st.write("\n\n\n")
+                        st.download_button("Copy Outline", content_outline, file_name="outline.txt")
                     else:
-                        st.error("💥 **Failed to generate outline. Please try again!**")
+                        st.error("We couldn't generate your outline. Please try again or check your AI Key.")
             else:
-                st.error("🚫 **Input Title/Topic of content to outline is required!**")
+                st.warning("Please enter a topic or keywords to get started.")
 
 
-def generate_outline(outline_title, content_type, num_headings, num_subheadings):
+def help_faq_section():
+    with st.expander('❓ Need Help?', expanded=False):
+        st.markdown('''
+        - <b>What is an AI Outline?</b> An AI-generated outline gives you a structured plan for your content, saving you time and boosting creativity.<br>
+        - <b>Do I need an AI Key?</b> No, you can use the tool without one. Only add your key if you have issues or want to use your own quota.<br>
+        - <b>Why do I see errors?</b> Make sure you entered a topic. If you see API errors, try adding your own Gemini AI Key.<br>
+        - <b>Still stuck?</b> <a href="https://github.com/AJaySi/AI-Writer" target="_blank">See our support & documentation</a>
+        ''', unsafe_allow_html=True)
+
+
+def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None):
+    """Generate a content outline using Gemini LLM."""
     prompt = f"""
     As an expert and experienced content writer for various online platforms, I will provide you with my 'topic title'.
     You are tasked with outlining a {content_type} type of content. 
@@ -150,13 +194,12 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings)
 
     \n\nMy 'topic title' is: '{outline_title}'
     """
-
-    return gemini_text_response(prompt, st.session_state.get("user_gemini_api_key"))
+    return gemini_text_response(prompt, user_gemini_api_key)
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def gemini_text_response(prompt, user_gemini_api_key=None):
-    """ Common functiont to get response from gemini pro Text. """
+    """Get response from Gemini LLM."""
     try:
         api_key = user_gemini_api_key or os.getenv('GEMINI_API_KEY')
         if not api_key:
@@ -165,14 +208,7 @@ def gemini_text_response(prompt, user_gemini_api_key=None):
         genai.configure(api_key=api_key)
     except Exception as err:
         st.error(f"Failed to configure Gemini: {err}")
-    # Set up the model
-    generation_config = {
-        "temperature": 0.6,
-        "top_k": 1,
-        "max_output_tokens": 1024
-    }
-    # FIXME: Expose model_name in main_config
-    model = genai.GenerativeModel(model_name="gemini-2.0-flash", generation_config=generation_config)
+    model = genai.GenerativeModel(model_name=MODEL_NAME, generation_config=GENERATION_CONFIG)
     try:
         response = model.generate_content(prompt)
         return response.text
