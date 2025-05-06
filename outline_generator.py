@@ -156,7 +156,7 @@ def input_section():
                         st.success('Your outline is ready!')
                         st.subheader('📋 Your Content Outline:')
                         st.markdown(content_outline)
-                        st.download_button("Copy Outline", content_outline, file_name="outline.txt")
+                        st.download_button("Copy Outline", content_outline, file_name="outline.txt", help="Download or copy your outline.")
                     else:
                         st.error("We couldn't generate your outline. Please try again or check your AI Key.")
             else:
