@@ -57,14 +57,13 @@ def main():
     st.markdown('<h1 style="display:flex;align-items:center;font-size:2.5rem;gap:0.5rem;">🧕 ALwrity Blog Outline Generator</h1>', unsafe_allow_html=True)
     st.markdown('<div style="color:#1976D2;font-size:1.2rem;margin-bottom:1.5rem;">Generate a high-quality, structured outline for your blog, article, or essay in seconds.</div>', unsafe_allow_html=True)
 
-    # How it works section
-    with st.expander('ℹ️ How it works', expanded=False):
-        st.markdown('''
-        1. **Enter your content title or main keywords.**
-        2. **Select content type and number of headings/subheadings.**
-        3. Click **Get AI Outline** to generate a detailed, SEO-friendly outline.
-        4. Copy and use the results in your blog or article!
-        ''')
+    # API Key Input Section
+    with st.expander("API Configuration 🔑", expanded=False):
+        st.markdown('''If the default Gemini API key is unavailable or exceeds its limits, you can provide your own API key below.<br>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank">Get Gemini API Key</a>
+        ''', unsafe_allow_html=True)
+        user_gemini_api_key = st.text_input("Gemini API Key", type="password", help="Paste your Gemini API Key here if you have one. Otherwise, the tool will use the default key if available.")
+        st.session_state["user_gemini_api_key"] = user_gemini_api_key
 
     input_section()
 
@@ -114,7 +113,7 @@ def input_section():
         if st.button('**✍️ Get AI Outline**'):
             if outline_title.strip():
                 with st.spinner("⏳ Hang On, Generating Outline..."):
-                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings)
+                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings, st.session_state.get("user_gemini_api_key"))
                     if content_outline:
                         st.subheader('**📋 Your Content Outline:**')
                         st.markdown(content_outline)
@@ -125,7 +124,7 @@ def input_section():
                 st.error("🚫 **Input Title/Topic of content to outline is required!**")
 
 
-def generate_outline(outline_title, content_type, num_headings, num_subheadings):
+def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None):
     prompt = f"""
     As an expert and experienced content writer for various online platforms, I will provide you with my 'topic title'.
     You are tasked with outlining a {content_type} type of content. 
@@ -146,14 +145,18 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings)
     \n\nMy 'topic title' is: '{outline_title}'
     """
 
-    return gemini_text_response(prompt)
+    return gemini_text_response(prompt, user_gemini_api_key)
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
-def gemini_text_response(prompt):
+def gemini_text_response(prompt, user_gemini_api_key=None):
     """ Common functiont to get response from gemini pro Text. """
     try:
-        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        api_key = user_gemini_api_key or os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            st.error("GEMINI_API_KEY is missing. Please provide it in the sidebar or set it in the environment.")
+            return None
+        genai.configure(api_key=api_key)
     except Exception as err:
         st.error(f"Failed to configure Gemini: {err}")
     # Set up the model
@@ -162,8 +165,7 @@ def gemini_text_response(prompt):
         "top_k": 1,
         "max_output_tokens": 1024
     }
-    # FIXME: Expose model_name in main_config
-    model = genai.GenerativeModel(model_name="gemini-2.0-pro-latest", generation_config=generation_config)
+    model = genai.GenerativeModel(model_name="gemini-2.0-flash", generation_config=generation_config)
     try:
         response = model.generate_content(prompt)
         return response.text
