@@ -8,25 +8,38 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 def main():
-    # Set page configuration
+    set_page_config()
+    custom_css()
+    hide_elements()
+    title_and_description()
+    advanced_settings()
+    input_section()
+
+
+def set_page_config():
     st.set_page_config(
-        page_title="ALwrity - AI Blog Outline Generator",
+        page_title="Alwrity - Content Outline Generator",
         layout="wide",
     )
-    # Custom CSS for theme
+
+
+def custom_css():
     st.markdown("""
         <style>
                 ::-webkit-scrollbar-track {
         background: #e1ebf9;
         }
+
         ::-webkit-scrollbar-thumb {
             background-color: #90CAF9;
             border-radius: 10px;
             border: 3px solid #e1ebf9;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #64B5F6;
         }
+
         ::-webkit-scrollbar {
             width: 16px;
         }
@@ -48,34 +61,27 @@ def main():
         }
         </style>
     """, unsafe_allow_html=True)
-    # Hide top header line
-    st.markdown('<style>header {visibility: hidden;}</style>', unsafe_allow_html=True)
-    # Hide footer
-    st.markdown('<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>', unsafe_allow_html=True)
 
-    # Tool title and description at the top
-    st.markdown('<h1 style="display:flex;align-items:center;font-size:2.5rem;gap:0.5rem;">🧕 ALwrity Blog Outline Generator</h1>', unsafe_allow_html=True)
-    st.markdown('<div style="color:#1976D2;font-size:1.2rem;margin-bottom:1.5rem;">Generate a high-quality, structured outline for your blog, article, or essay in seconds.</div>', unsafe_allow_html=True)
 
-    # API Key Input Section
-    with st.expander("API Configuration 🔑", expanded=False):
-        st.markdown('''If the default Gemini API key is unavailable or exceeds its limits, you can provide your own API key below.<br>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank">Get Gemini API Key</a>
-        ''', unsafe_allow_html=True)
-        user_gemini_api_key = st.text_input("Gemini API Key", type="password", help="Paste your Gemini API Key here if you have one. Otherwise, the tool will use the default key if available.")
+def hide_elements():
+    hide_decoration_bar_style = '<style>header {visibility: hidden;}</style>'
+    st.markdown(hide_decoration_bar_style, unsafe_allow_html=True)
+
+    hide_streamlit_footer = '<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>'
+    st.markdown(hide_streamlit_footer, unsafe_allow_html=True)
+
+
+def title_and_description():
+    st.title("🧕 Alwrity - AI Content Outline Generator")
+    st.markdown("This app helps you create a comprehensive outline for your blog, article, essay, story, or any content type using AI technology. 🧠✨")
+
+
+def advanced_settings():
+    # Advanced Settings (API Key)
+    with st.expander("Advanced Settings ⚙️", expanded=False):
+        st.markdown('''If you have your own Gemini AI Key, you can enter it below. <a href="https://aistudio.google.com/app/apikey" target="_blank">Get Gemini API Key</a>''', unsafe_allow_html=True)
+        user_gemini_api_key = st.text_input("Gemini AI Key (optional)", type="password", help="Paste your Gemini API Key here if you have one. Otherwise, the tool will use the default key if available.")
         st.session_state["user_gemini_api_key"] = user_gemini_api_key
-
-    input_section()
-
-    # Help & Support Section
-    with st.expander('❓ Help & Troubleshooting', expanded=False):
-        st.markdown('''
-        - **Not getting results?** Make sure you entered a title or keywords.
-        - **API key issues?** Ensure your Gemini API key is set in your environment.
-        - **Still stuck?** [See our support & documentation](https://github.com/AJaySi/AI-Writer)
-        ''')
-
-    st.markdown('<div class="footer">Made with ❤️ by ALwrity | <a href="https://github.com/AJaySi/AI-Writer" style="color:#1976D2;">Support</a></div>', unsafe_allow_html=True)
 
 
 def input_section():
@@ -113,7 +119,7 @@ def input_section():
         if st.button('**✍️ Get AI Outline**'):
             if outline_title.strip():
                 with st.spinner("⏳ Hang On, Generating Outline..."):
-                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings, st.session_state.get("user_gemini_api_key"))
+                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings)
                     if content_outline:
                         st.subheader('**📋 Your Content Outline:**')
                         st.markdown(content_outline)
@@ -124,7 +130,7 @@ def input_section():
                 st.error("🚫 **Input Title/Topic of content to outline is required!**")
 
 
-def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None):
+def generate_outline(outline_title, content_type, num_headings, num_subheadings):
     prompt = f"""
     As an expert and experienced content writer for various online platforms, I will provide you with my 'topic title'.
     You are tasked with outlining a {content_type} type of content. 
@@ -145,7 +151,7 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings,
     \n\nMy 'topic title' is: '{outline_title}'
     """
 
-    return gemini_text_response(prompt, user_gemini_api_key)
+    return gemini_text_response(prompt, st.session_state.get("user_gemini_api_key"))
 
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
@@ -154,7 +160,7 @@ def gemini_text_response(prompt, user_gemini_api_key=None):
     try:
         api_key = user_gemini_api_key or os.getenv('GEMINI_API_KEY')
         if not api_key:
-            st.error("GEMINI_API_KEY is missing. Please provide it in the sidebar or set it in the environment.")
+            st.error("GEMINI_API_KEY is missing. Please provide it in Advanced Settings or set it in the environment.")
             return None
         genai.configure(api_key=api_key)
     except Exception as err:
@@ -165,6 +171,7 @@ def gemini_text_response(prompt, user_gemini_api_key=None):
         "top_k": 1,
         "max_output_tokens": 1024
     }
+    # FIXME: Expose model_name in main_config
     model = genai.GenerativeModel(model_name="gemini-2.0-flash", generation_config=generation_config)
     try:
         response = model.generate_content(prompt)
