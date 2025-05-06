@@ -160,7 +160,7 @@ def gemini_text_response(prompt):
         "max_output_tokens": 1024
     }
     # FIXME: Expose model_name in main_config
-    model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest", generation_config=generation_config)
+    model = genai.GenerativeModel(model_name="gemini-2.0-pro-latest", generation_config=generation_config)
     try:
         # text_response = []
         response = model.generate_content(prompt)
