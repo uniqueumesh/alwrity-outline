@@ -1,8 +1,9 @@
 import time
 import os
 import json
+import io
+import base64
 
-import google.generativeai as genai
 import streamlit as st
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
@@ -105,6 +106,8 @@ def advanced_settings():
 
 
 def input_section():
+    if 'outline_history' not in st.session_state:
+        st.session_state['outline_history'] = []
     with st.expander("**💡 PRO-TIP** - Better input yield, better results.", expanded=True):
         col1, space, col2 = st.columns([5, 0.1, 5])
         with col1:
@@ -158,9 +161,18 @@ def input_section():
                     if content_outline:
                         st.success('Your outline is ready!')
                         st.subheader('📋 Your Content Outline:')
-                        st.markdown(content_outline)
-                        if st.download_button("📋 Copy Outline", content_outline, file_name="outline.txt", help="Download or copy your outline."):
-                            st.toast("Outline copied to clipboard!", icon="✅")
+                        st.write(content_outline)
+                        if 'outline_history' not in st.session_state:
+                            st.session_state['outline_history'] = []
+                        st.session_state['outline_history'].append({
+                            'title': outline_title,
+                            'content': content_outline,
+                            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                        })
+                        if st.download_button("Show Previous Outlines", "Show", key="show_prev_btn"):
+                            show_previous_outlines()
+                        if st.download_button("Send Feedback / Report Issue", "Send", key="feedback_btn"):
+                            feedback_form()
                     else:
                         st.error("We couldn't generate your outline. Please try again or check your AI Key.")
             else:
@@ -179,6 +191,7 @@ def help_faq_section():
 
 def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None, outline_format="Numbered List"):
     """Generate a content outline using Gemini LLM."""
+    import google.generativeai as genai  # moved import inside function
     format_instruction = "Use numbered lists for headings and subheadings." if outline_format == "Numbered List" else "Use bullet points for headings and subheadings."
     prompt = f"""
     As an expert and experienced content writer for various online platforms, I will provide you with my 'topic title'.
@@ -206,6 +219,7 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings,
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def gemini_text_response(prompt, user_gemini_api_key=None):
     """Get response from Gemini LLM."""
+    import google.generativeai as genai  # moved import inside function
     try:
         api_key = user_gemini_api_key or os.getenv('GEMINI_API_KEY')
         if not api_key:
@@ -220,6 +234,21 @@ def gemini_text_response(prompt, user_gemini_api_key=None):
         return response.text
     except Exception as err:
         st.error(f"Failed to get response from Gemini: {err}. Retrying.")
+
+
+def show_previous_outlines():
+    st.markdown("### Previous Outlines This Session")
+    for idx, item in enumerate(st.session_state.get('outline_history', [])):
+        st.markdown(f"**{idx+1}. {item['title']}** ({item['timestamp']})")
+        st.markdown(item['content'])
+        st.markdown("---")
+
+
+def feedback_form():
+    st.markdown("### Feedback / Report Issue")
+    feedback = st.text_area("Your feedback or issue:")
+    if st.button("Submit Feedback"):
+        st.success("Thank you for your feedback! (This is a demo, feedback is not sent anywhere.)")
 
 
 if __name__ == "__main__":
