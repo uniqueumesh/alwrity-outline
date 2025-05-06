@@ -37,23 +37,19 @@ def set_page_config():
 def custom_css():
     st.markdown("""
         <style>
-                ::-webkit-scrollbar-track {
-        background: #e1ebf9;
+        html, body, [class*="css"]  {
+            font-size: 16px;
         }
-
-        ::-webkit-scrollbar-thumb {
-            background-color: #90CAF9;
-            border-radius: 10px;
-            border: 3px solid #e1ebf9;
+        @media (max-width: 600px) {
+            html, body, [class*="css"]  {
+                font-size: 14px !important;
+            }
+            .stButton > button, .stTextInput > div > input {
+                font-size: 15px !important;
+            }
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64B5F6;
-        }
-
-        ::-webkit-scrollbar {
-            width: 16px;
-        }
+        .streamlit-expanderHeader {color: #fff !important; background: #111 !important; border-radius: 8px;}
+        .streamlit-expanderContent {background: #111 !important;}
         div.stButton > button:first-child {
             background: #1565C0 !important;
             color: white !important;
@@ -70,8 +66,7 @@ def custom_css():
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
             font-weight: bold;
         }
-        .streamlit-expanderHeader {color: #fff !important; background: #111 !important; border-radius: 8px;}
-        .streamlit-expanderContent {background: #111 !important;}
+        .stAlert, .stError, .stWarning { color: #fff !important; background: #b71c1c !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -121,42 +116,51 @@ def input_section():
                 st.session_state['example_clicked'] = True
 
             st.text_input(
-                'Topic or Main Keywords',
+                '📝 Topic or Main Keywords',
                 key='outline_title',
                 help="Describe your content idea in a sentence or a few keywords. E.g., 'Free AI Writer'",
-                placeholder="E.g., How to Boost Your Productivity with Simple Hacks"
+                placeholder="E.g., How to Boost Your Productivity with Simple Hacks",
+                args=({'aria-label': 'Topic or Main Keywords'},)
             )
-            st.button('Try Example', on_click=fill_example, help="Click to auto-fill an example topic.")
+            st.button('✨ Try Example', on_click=fill_example, help="Click to auto-fill an example topic.")
             content_type = st.selectbox(
-                "Content Type",
+                "📄 Content Type",
                 options=["Blog", "Article", "Essay", "Story", "Other"],
                 help="Choose the type of content you want to outline."
             )
         with col2:
             num_headings = st.slider(
-                "Number of Main Headings",
+                "🔢 Number of Main Headings",
                 min_value=1,
                 max_value=10,
                 value=5,
                 help="How many main sections should your outline have?"
             )
             num_subheadings = st.slider(
-                "Subheadings per Heading",
+                "🔸 Subheadings per Heading",
                 min_value=1,
                 max_value=5,
                 value=3,
                 help="How many subpoints under each main heading?"
             )
-        if st.button('Generate Outline', help="Click to generate your content outline."):
+            outline_format = st.radio(
+                "📝 Outline Format",
+                options=["Numbered List", "Bulleted List"],
+                index=0,
+                help="Choose how you want your outline formatted.",
+                horizontal=True
+            )
+        if st.button('🚀 Generate Outline', help="Click to generate your content outline."):
             outline_title = st.session_state.get('outline_title', '')
             if outline_title.strip():
                 with st.spinner("Generating your outline..."):
-                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings, st.session_state.get("user_gemini_api_key"))
+                    content_outline = generate_outline(outline_title, content_type, num_headings, num_subheadings, st.session_state.get("user_gemini_api_key"), outline_format)
                     if content_outline:
                         st.success('Your outline is ready!')
                         st.subheader('📋 Your Content Outline:')
                         st.markdown(content_outline)
-                        st.download_button("Copy Outline", content_outline, file_name="outline.txt", help="Download or copy your outline.")
+                        if st.download_button("📋 Copy Outline", content_outline, file_name="outline.txt", help="Download or copy your outline."):
+                            st.toast("Outline copied to clipboard!", icon="✅")
                     else:
                         st.error("We couldn't generate your outline. Please try again or check your AI Key.")
             else:
@@ -173,8 +177,9 @@ def help_faq_section():
         ''', unsafe_allow_html=True)
 
 
-def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None):
+def generate_outline(outline_title, content_type, num_headings, num_subheadings, user_gemini_api_key=None, outline_format="Numbered List"):
     """Generate a content outline using Gemini LLM."""
+    format_instruction = "Use numbered lists for headings and subheadings." if outline_format == "Numbered List" else "Use bullet points for headings and subheadings."
     prompt = f"""
     As an expert and experienced content writer for various online platforms, I will provide you with my 'topic title'.
     You are tasked with outlining a {content_type} type of content. 
@@ -189,6 +194,7 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings,
     5. Use headings, subheadings, and bullet points for a clear and coherent outline.
     6. Proofread the outline to ensure it is well-written, error-free, and easy to follow.
     7. Do not explain what and why; just give the finest possible output.
+    8. {format_instruction}
 
     Important: Please read the entire prompt before writing anything, and follow the instructions exactly as given.
 
