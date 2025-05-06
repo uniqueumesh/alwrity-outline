@@ -8,37 +8,25 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 def main():
-    set_page_config()
-    custom_css()
-    hide_elements()
-    title_and_description()
-    input_section()
-
-
-def set_page_config():
+    # Set page configuration
     st.set_page_config(
-        page_title="Alwrity - Content Outline Generator",
+        page_title="ALwrity - AI Blog Outline Generator",
         layout="wide",
     )
-
-
-def custom_css():
+    # Custom CSS for theme
     st.markdown("""
         <style>
                 ::-webkit-scrollbar-track {
         background: #e1ebf9;
         }
-
         ::-webkit-scrollbar-thumb {
             background-color: #90CAF9;
             border-radius: 10px;
             border: 3px solid #e1ebf9;
         }
-
         ::-webkit-scrollbar-thumb:hover {
             background: #64B5F6;
         }
-
         ::-webkit-scrollbar {
             width: 16px;
         }
@@ -60,19 +48,35 @@ def custom_css():
         }
         </style>
     """, unsafe_allow_html=True)
+    # Hide top header line
+    st.markdown('<style>header {visibility: hidden;}</style>', unsafe_allow_html=True)
+    # Hide footer
+    st.markdown('<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>', unsafe_allow_html=True)
 
+    # Tool title and description at the top
+    st.markdown('<h1 style="display:flex;align-items:center;font-size:2.5rem;gap:0.5rem;">🧕 ALwrity Blog Outline Generator</h1>', unsafe_allow_html=True)
+    st.markdown('<div style="color:#1976D2;font-size:1.2rem;margin-bottom:1.5rem;">Generate a high-quality, structured outline for your blog, article, or essay in seconds.</div>', unsafe_allow_html=True)
 
-def hide_elements():
-    hide_decoration_bar_style = '<style>header {visibility: hidden;}</style>'
-    st.markdown(hide_decoration_bar_style, unsafe_allow_html=True)
+    # How it works section
+    with st.expander('ℹ️ How it works', expanded=False):
+        st.markdown('''
+        1. **Enter your content title or main keywords.**
+        2. **Select content type and number of headings/subheadings.**
+        3. Click **Get AI Outline** to generate a detailed, SEO-friendly outline.
+        4. Copy and use the results in your blog or article!
+        ''')
 
-    hide_streamlit_footer = '<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>'
-    st.markdown(hide_streamlit_footer, unsafe_allow_html=True)
+    input_section()
 
+    # Help & Support Section
+    with st.expander('❓ Help & Troubleshooting', expanded=False):
+        st.markdown('''
+        - **Not getting results?** Make sure you entered a title or keywords.
+        - **API key issues?** Ensure your Gemini API key is set in your environment.
+        - **Still stuck?** [See our support & documentation](https://github.com/AJaySi/AI-Writer)
+        ''')
 
-def title_and_description():
-    st.title("🧕 Alwrity - AI Content Outline Generator")
-    st.markdown("This app helps you create a comprehensive blog outline using AI technology. 🧠✨")
+    st.markdown('<div class="footer">Made with ❤️ by ALwrity | <a href="https://github.com/AJaySi/AI-Writer" style="color:#1976D2;">Support</a></div>', unsafe_allow_html=True)
 
 
 def input_section():
@@ -145,7 +149,6 @@ def generate_outline(outline_title, content_type, num_headings, num_subheadings)
     return gemini_text_response(prompt)
 
 
-
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def gemini_text_response(prompt):
     """ Common functiont to get response from gemini pro Text. """
@@ -162,11 +165,9 @@ def gemini_text_response(prompt):
     # FIXME: Expose model_name in main_config
     model = genai.GenerativeModel(model_name="gemini-2.0-pro-latest", generation_config=generation_config)
     try:
-        # text_response = []
         response = model.generate_content(prompt)
         return response.text
     except Exception as err:
-        st.error(response)
         st.error(f"Failed to get response from Gemini: {err}. Retrying.")
 
 
