@@ -20,8 +20,8 @@ Alwrity is a Streamlit application that utilizes Google's Generative AI (Gemini)
 2. **Install dependencies:** `pip install -r requirements.txt`
 3. **Set API keys:**
    - Obtain an API key for the Gemini AI.
-   - Store the API key as an environment variable (e.g., in a `.env` file).
-4. **Run the application:** `streamlit run app.py`
+   - You can enter your API key directly in the app UI under "Advanced Settings" when you run the tool. No need to create a .env file.
+4. **Run the application:** `streamlit run outline_generator.py`
 
 ## Usage
 
